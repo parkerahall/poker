@@ -1,10 +1,9 @@
 # TRACKS REAL-LIFE POKER GAME BEING PLAYED
 
-# TODO: immediate win case after folding all around
-# TODO: immediately end betting round after everyone calls
-
-NUM_BETTING_ROUNDS = 3
+NUM_BETTING_ROUNDS = 4
 ACTIONS = set(["check", "raise", "call", "fold"])
+
+ROUND_DICT = {0: "PRE-FLOP", 1: "POST-FLOP", 2: "POST-TURN", 3: "POST-RIVER"}
 
 def start_game():
 	player_list, player_dict = init_players()
@@ -15,6 +14,7 @@ def start_game():
 
 	while playing:
 		playing = play_hand(player_list, player_dict, button, small_blind, big_blind)
+		print(player_dict)
 		button += 1
 
 	print_players(player_dict)
@@ -84,22 +84,28 @@ def play_hand(player_list, player_dict, button, small_blind, big_blind):
 	offset = 2
 	current_player_list = player_list
 
-	for _ in range(NUM_BETTING_ROUNDS):
-		new_player_set, new_pot = betting_round(current_player_list, player_dict, button, bet_dict, offset)
+	for i in range(NUM_BETTING_ROUNDS):
+		print(ROUND_DICT[i])
+		new_player_list, new_pot = betting_round(current_player_list, player_dict, button, bet_dict, offset)
+		print(new_player_list)
 		pot += new_pot
 
-		if new_player_set == None and new_pot == None:
+		if new_player_list == None and new_pot == None:
 			return False
-		elif len(new_player_set) == 1:
-			winner = new_player_set.pop()
+		elif len(new_player_list) == 1:
+			winner = new_player_list[0]
 			player_dict[winner] += pot
 			return True
 
-		current_player_list = []
-		for i in range(num_players):
-			check_player = player_list[(i + button) % num_players]
-			if check_player in new_player_set:
-				current_player_list.append(check_player)
+		if i == 0:
+			current_player_list = []
+			new_player_set = set(new_player_list)
+			for i in range(num_players):
+				check_player = player_list[(i + button) % num_players]
+				if check_player in new_player_set:
+					current_player_list.append(check_player)
+		else:
+			current_player_list = new_player_list
 		bet_dict = {player : 0 for player in current_player_list}
 		offset = 0
 
@@ -127,44 +133,57 @@ def play_hand(player_list, player_dict, button, small_blind, big_blind):
 
 def betting_round(player_list, player_dict, button, bet_dict, offset):
 	start_index = button + offset
-	current_player_list = player_list
+	num_players = len(player_list)
 	max_bet = max([bet_dict[key] for key in bet_dict])
 
 	new_pot = 0
 	can_check = True
 
-	while True:
-		num_players = len(current_player_list)
-		new_player_list = []
-		for i in range(len(current_player_list)):
-			current_player = current_player_list[(start_index + i) % num_players]
-			print_bets(bet_dict)
-			action, bad_action = player_action(current_player, can_check)
+	have_played = 0
 
-			while bad_action:
-				print("Please enter 'check', 'call', 'fold' or 'raise NUM'")
+	while True:
+		for i in range(len(player_list)):
+			current_player = player_list[(start_index + i) % num_players]
+			if bet_dict[current_player] != "FOLD":
+				fold_status = [bet_dict[player] == "FOLD" for player in player_list if player != current_player]
+				if all(fold_status):
+					return [current_player], new_pot
+
+				print_bets(bet_dict)
 				action, bad_action = player_action(current_player, can_check)
 
-			add_to_pot, add_to_max = handle_action(current_player, action, player_dict, bet_dict, max_bet)
-			new_pot += add_to_pot
-			max_bet += add_to_max
+				while bad_action:
+					print("Please enter 'check', 'call', 'fold' or 'raise NUM'")
+					action, bad_action = player_action(current_player, can_check)
 
-			keyword = action[0].lower()
-			if keyword != "fold":
-				new_player_list.append(current_player)
-			if keyword == "raise":
-				can_check = False
+				add_to_pot, add_to_max = handle_action(current_player, action, player_dict, bet_dict, max_bet)
+				new_pot += add_to_pot
+				max_bet += add_to_max
 
-		done = True
-		in_for = bet_dict[new_player_list[0]]
-		for player in new_player_list:
-			if bet_dict[player] != in_for:
-				done = False
-				break
+				keyword = action[0].lower()
+				if keyword == "fold":
+					bet_dict[current_player] = "FOLD"
+				if keyword == "raise":
+					can_check = False
+
+				have_played += 1
+
+				done = True
+				if have_played >= num_players:
+					new_player_list = []
+					for player in player_list:
+						in_for = bet_dict[player]
+						if in_for == max_bet:
+							new_player_list.append(player)
+						elif in_for != "FOLD":
+							done = False
+							break
+				else:
+					done = False
+			
+				if done:
+					return new_player_list, new_pot
 		
-		if done:
-			return set(new_player_list), new_pot
-		current_player_list = new_player_list
 		start_index = 0
 
 
