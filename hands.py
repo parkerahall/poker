@@ -11,17 +11,50 @@ HANDS = {"ROYAL FLUSH": 9,
         "PAIR": 1,
         "HIGH CARD": 0}
 
+VALUES = {value : key for (key, value) in HANDS.items()}
+
 NUM_AVAIL_CARDS = 7
+
+def conv_to_int(value):
+    face_card_lookup = {'J': 11, 'Q': 12, 'K': 13, 'A': 14}
+    if value in face_card_lookup:
+        return face_card_lookup[value]
+    return int(value)
+
+def conv_to_str(value):
+    face_card_lookup = {11 : 'J', 12 : 'Q', 13 : 'K',  14 : 'A'}
+    if value in face_card_lookup:
+        return face_card_lookup[value]
+    return str(value)
 
 class Hands:
     def __init__(self, hand, high):
         assert (hand in HANDS)
         self.hand = hand
-        self.high = high
+        self.high = tuple([conv_to_int(elt) for elt in high])
+
+    @staticmethod
+    def from_tuple(tup):
+        assert (len(tup) > 0)
+        hand = VALUES[tup[0]]
+        assert (hand in HANDS)
+        high = tup[1:]
+        for elt in high:
+            if type(elt) == str:
+                assert (elt in set(['J', 'Q', 'K', 'A']))
+            elif type(elt) == int:
+                assert (elt > 1 and elt < 15)
+            else:
+                assert False
+        return Hands(hand, high)
 
     @staticmethod
     def sort(hand_list):
         return sorted(hand_list, key=lambda x: x.get_tup_value(), reverse=True)
+
+    @staticmethod
+    def is_equal(hand1, hand2):
+        return hand1.get_tup_value() == hand2.get_tup_value()
 
     # [card_list] must be sorted in descending order
     @staticmethod
@@ -36,16 +69,19 @@ class Hands:
                 last_value = card_value
                 straight_length += 1
                 if straight_length == 5:
-                    return highest_value
+                    return Cards.convert_to_str(highest_value)
             elif card_value < last_value:
                 highest_value = card_value
                 last_value = card_value
                 straight_length = 1
+        # edge case of 5-high straight
+        if highest_value == 5 and first_card.get_int_value() == 14:
+            return 5
         return None
 
     @staticmethod
     def get_highest_hand(card_list):
-        assert(len(card_list) == NUM_AVAIL_CARDS)
+        assert(len(card_list) <= NUM_AVAIL_CARDS)
         
         sorted_list = Cards.sort(card_list)
         
@@ -60,7 +96,7 @@ class Hands:
                 elif high_hand != None:
                     return Hands("STRAIGHT FLUSH", (high_hand,))
                 else:
-                    highest_value = suited_set[0].get_int_value()
+                    highest_value = suited_set[0]
                     return Hands("FLUSH", (highest_value,))
 
         # check for normal straight
@@ -88,7 +124,7 @@ class Hands:
                 kicker = min(reverse_dict[biggest_set])
                 return Hands("FULL HOUSE", (set_value, kicker))
             else:
-                set_value = reverse[biggest_set]
+                set_value = reverse_dict[biggest_set]
                 if 2 in reverse_dict:
                     pair_value = max(reverse_dict[2])
                     return Hands("FULL HOUSE", (set_value[0], pair_value))
@@ -103,16 +139,16 @@ class Hands:
                 kicker = Cards.highest_value_without(sorted_list, set([high_pair, low_pair]))
                 return Hands("TWO PAIR", (high_pair, low_pair, kicker))
             else:
-                high_pair = reverse_dict[biggest_set]
+                high_pair = reverse_dict[biggest_set][0]
                 kicker = Cards.highest_value_without(sorted_list, set(high_pair))
                 return Hands("PAIR", (high_pair, kicker))
         else:
-            high_card = max(value_dict)
+            high_card = sorted_list[0].value
             return Hands("HIGH CARD", (high_card,))
 
     def get_tup_value(self):
         face_card_lookup = {'J': 11, 'Q': 12, 'K': 13, 'A': 14}
-        high_tup = tuple([face_card_lookup.get(elt, elt) for elt in self.high])
+        high_tup = tuple([conv_to_int(elt) for elt in self.high])
         hand_tup = (HANDS[self.hand],)
         return hand_tup + high_tup
 
@@ -121,7 +157,7 @@ class Hands:
 
     def __str__(self):
         hand_string = self.hand
-        high_string = ",".join([str(elt) for elt in self.high])
+        high_string = ",".join([conv_to_str(elt) for elt in self.high])
         suffix = "HIGH"
         return " ".join([hand_string, high_string, suffix])
 

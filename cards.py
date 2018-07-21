@@ -1,3 +1,5 @@
+import random
+
 SUITS = set(["HEARTS", "DIAMONDS", "SPADES", "CLUBS"])
 
 class Cards:	
@@ -25,7 +27,7 @@ class Cards:
 		for card in card_list:
 			card_value = card.value
 			if card_value not in without:
-				return card_value
+				return card.get_int_value()
 
 	@staticmethod
 	def sort(card_list):
@@ -52,8 +54,12 @@ class Cards:
 		deck = []
 		for suit in SUITS:
 			for value in range(2, 15):
-				deck.append(Cards(suit, value))
+				deck.append(Cards(value, suit))
 		return deck
+
+	@staticmethod
+	def shuffle(card_list):
+		random.shuffle(card_list)
 
 	def get_int_value(self):
 		face_card_lookup = {'J': 11, 'Q': 12, 'K': 13, 'A': 14}

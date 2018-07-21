@@ -80,13 +80,13 @@ def play_hand(player_list, player_dict, button, small_blind, big_blind):
 	pot += big_blind
 	bet_dict[bb] = big_blind
 
-	pot = small_blind + big_blind
 	offset = 2
 	current_player_list = player_list
 
 	for i in range(NUM_BETTING_ROUNDS):
 		print(ROUND_DICT[i])
 		new_player_list, new_pot = betting_round(current_player_list, player_dict, button, bet_dict, offset)
+		pot += new_pot
 
 		if new_player_list == None and new_pot == None:
 			player_dict[sb] += small_blind
@@ -97,13 +97,11 @@ def play_hand(player_list, player_dict, button, small_blind, big_blind):
 			player_dict[winner] += pot
 			return True
 
-		pot += new_pot
-
 		if i == 0:
 			current_player_list = []
 			new_player_set = set(new_player_list)
-			for i in range(num_players):
-				check_player = player_list[(i + button) % num_players]
+			for j in range(num_players):
+				check_player = player_list[j]
 				if check_player in new_player_set:
 					current_player_list.append(check_player)
 		else:
@@ -250,13 +248,7 @@ def check_chop(current_player, bet_dict):
 def handle_action(current_player, action, player_dict, bet_dict, max_bet):
 	keyword = action[0].lower()
 	if keyword == "raise":
-		bad_num = True
-		while bad_num:
-			try:
-				max_diff = int(action[1])
-				bad_num = False
-			except:
-				action[1] = raw_input("Please enter a positive integer: ")
+		max_diff = int(action[1])
 		old_bet = bet_dict[current_player]
 		pot_diff = max_bet + max_diff - old_bet
 		player_dict[current_player] -= pot_diff
